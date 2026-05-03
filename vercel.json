@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "src/server.js"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": "postgresql://neondb_owner:npg_iOwCy1BjADS3@ep-delicate-king-an0df23o-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require",
+    "JWT_SECRET": "loha_super_secret_key_2026_change_this_to_32_chars",
+    "CLOUDINARY_CLOUD_NAME": "loha",
+    "CLOUDINARY_API_KEY": "261765812249793",
+    "CLOUDINARY_API_SECRET": "HL4zTYlHHTjZ1R3OHi9UWHvT04Y",
+    "NODE_ENV": "production"
+  }
+}
