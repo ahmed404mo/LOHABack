@@ -1,23 +1,35 @@
 {
-  "name": "project_structure",
+  "name": "loha-backend",
   "version": "1.0.0",
-  "main": "./src/main.js",
-  "type": "module",
+  "description": "LOHA Art Gallery Backend API",
+  "main": "src/server.js",
   "scripts": {
-    "start:dev": "cross-env NODE_ENV=development  node --watch-path=. ./src/main.js",
-    "start:prod": "cross-env NODE_ENV=production  node  ./src/main.js"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "npx prisma migrate deploy",
+    "migrate-dev": "npx prisma migrate dev",
+    "studio": "npx prisma studio",
+    "generate": "npx prisma generate",
+    "create-admin": "node scripts/create-admin.js",
+    "seed": "node scripts/seed.js"
   },
-  "keywords": [],
-  "author": "abo al magd",
-  "license": "ISC",
-  "description": "this is my project structure for all node.js projects",
   "dependencies": {
-    "bcrypt": "^6.0.0",
-    "cross-env": "^10.1.0",
-    "crypto-js": "^4.2.0",
-    "dotenv": "^17.2.3",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.1.5"
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.10.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.10.0",
+    "helmet": "^7.0.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1",
+    "multer-storage-cloudinary": "^2.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "prisma": "^5.22.0"
   }
 }
