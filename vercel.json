@@ -2,16 +2,21 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/server.js",
+      "src": "api/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "src/server.js"
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
     }
-  ],
+  ]
+,
   "env": {
     "DATABASE_URL": "postgresql://neondb_owner:npg_iOwCy1BjADS3@ep-delicate-king-an0df23o-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require",
     "JWT_SECRET": "loha_super_secret_key_2026_change_this_to_32_chars",
