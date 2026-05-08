@@ -2,16 +2,17 @@
   "name": "loha-backend",
   "version": "1.0.0",
   "description": "LOHA Art Gallery Backend API",
-  "main": "src/api/index.js",
+  "main": "api/index.js",  
   "scripts": {
-    "dev": "nodemon",
+    "dev": "nodemon api/index.js",  
+    "vercel-build": "prisma generate",  
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node api/index.js",  
     "studio": "prisma studio",
     "migrate": "prisma migrate dev",
     "generate": "prisma generate",
-    "test:api": "tsx scripts/test-api.ts",
-    "create-admin": "tsx scripts/create-admin.ts",
+    "test:api": "node scripts/test-api.js",  
+    "create-admin": "node scripts/create-admin.js",  
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -32,12 +33,12 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
+    "@types/express": "^4.17.21",  
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^25.6.2",
+    "@types/node": "^20.11.0",  
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "typescript": "^5.3.3" 
   }
 }
