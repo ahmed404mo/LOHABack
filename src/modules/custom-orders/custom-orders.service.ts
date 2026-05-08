@@ -1,17 +1,18 @@
-import customOrderModel from './custom-orders.model';
-import ApiError from '../../core/utils/api-error';
-import { CustomOrder } from '@prisma/client';
+import customOrderModel from "./custom-orders.model";
+import ApiError from "../../core/utils/api-error";
+import { CustomOrder } from "@prisma/client";
+import type { File as MulterFile } from "multer";
 
 export const customOrderService = {
   async createCustomOrder(
     userId: number,
     size: string,
     message: string | null,
-    imageFile: Express.Multer.File | undefined  // ✅ undefined عشان نعمل validation
+    imageFile: MulterFile | undefined, // image is optional so validation can handle missing files
   ): Promise<CustomOrder> {
     // ✅ Validate image exists
     if (!imageFile) {
-      throw new ApiError('Design image is required', 400);
+      throw new ApiError("Design image is required", 400);
     }
 
     return customOrderModel.create(
@@ -19,7 +20,7 @@ export const customOrderService = {
       size,
       message,
       imageFile.path,
-      imageFile.filename
+      imageFile.filename,
     );
   },
 
@@ -31,13 +32,16 @@ export const customOrderService = {
     return customOrderModel.findAll();
   },
 
-  async updateCustomOrderStatus(orderId: string, status: string): Promise<CustomOrder> {
+  async updateCustomOrderStatus(
+    orderId: string,
+    status: string,
+  ): Promise<CustomOrder> {
     const order = await customOrderModel.findById(parseInt(orderId));
     if (!order) {
-      throw new ApiError('Custom order not found', 404);
+      throw new ApiError("Custom order not found", 404);
     }
     return customOrderModel.updateStatus(parseInt(orderId), status);
-  }
+  },
 };
 
 export default customOrderService;
