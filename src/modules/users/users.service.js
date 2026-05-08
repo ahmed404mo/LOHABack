@@ -78,7 +78,53 @@ const userService = {
       throw new ApiError('User not found', 404);
     }
     return user;
+  },
+  async getAllUsers() {
+    return userModel.findAll();
+  },
+
+  // ✅ جلب مستخدم بالـ ID
+  async getUserById(id) {
+    const user = await userModel.findById(parseInt(id));
+    if (!user) {
+      throw new ApiError('User not found', 404);
+    }
+    return user;
+  },
+
+  // ✅ تحديث مستخدم
+  async updateUser(id, data) {
+    const user = await userModel.findById(parseInt(id));
+    if (!user) {
+      throw new ApiError('User not found', 404);
+    }
+    return userModel.update(parseInt(id), data);
+  },
+
+  // ✅ حذف مستخدم
+  async deleteUser(id) {
+    const user = await userModel.findById(parseInt(id));
+    if (!user) {
+      throw new ApiError('User not found', 404);
+    }
+    return userModel.delete(parseInt(id));
+  },
+
+  // ✅ تغيير دور المستخدم
+  async updateUserRole(id, role) {
+    const validRoles = ['user', 'admin'];
+    if (!validRoles.includes(role)) {
+      throw new ApiError('Invalid role', 400);
+    }
+    
+    const user = await userModel.findById(parseInt(id));
+    if (!user) {
+      throw new ApiError('User not found', 404);
+    }
+    
+    return userModel.update(parseInt(id), { role });
   }
 };
+
 
 module.exports = userService;
