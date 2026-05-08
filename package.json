@@ -2,10 +2,9 @@
   "name": "loha-backend",
   "version": "1.0.0",
   "description": "LOHA Art Gallery Backend API",
-  "main": "src/server.js",
+  "main": "src/api/index.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "start:dev": "nodemon src/api/index.js",
     "vercel-build": "prisma generate && prisma migrate deploy",
     "migrate": "npx prisma migrate deploy",
     "migrate-dev": "npx prisma migrate dev",
@@ -29,7 +28,7 @@
     "multer-storage-cloudinary": "^4.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
+    "nodemon": "^3.1.14",
     "prisma": "^5.0.0"
   }
 }

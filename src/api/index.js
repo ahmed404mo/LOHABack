@@ -5,9 +5,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
+require('dotenv').config();
 
 const app = express();
 const prisma = new PrismaClient();
+const PORT = process.env.PORT || 5000;
 
 // ============= CONFIGURATION =============
 cloudinary.config({
@@ -26,7 +28,7 @@ app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Auth middleware
+// ============= AUTH MIDDLEWARE =============
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
@@ -51,7 +53,7 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-// Helper: Upload to Cloudinary
+// ============= HELPER FUNCTIONS =============
 const uploadToCloudinary = (buffer, folder) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -70,7 +72,7 @@ const uploadToCloudinary = (buffer, folder) => {
   });
 };
 
-// ============= HEALTH & TEST =============
+// ============= HEALTH & TEST ROUTES =============
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -83,39 +85,28 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API is working correctly!' });
 });
 
-// ============= AUTH ROUTES =============
+// ============= 👑 USER ROUTES (المدمجة والمنظمة) =============
 
-// Register
-app.post('/api/auth/register', async (req, res) => {
+// ✅ تسجيل مستخدم جديد
+app.post('/api/users/register', async (req, res) => {
   try {
     const { email, password, name, phone } = req.body;
     
-    // Validation
     if (!email || !password || !name) {
       return res.status(400).json({ success: false, message: 'Name, email and password are required' });
     }
     
-    // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
     
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Create user
     const user = await prisma.user.create({
-      data: { 
-        email, 
-        password: hashedPassword, 
-        name, 
-        phone: phone || null, 
-        role: 'user' 
-      }
+      data: { email, password: hashedPassword, name, phone: phone || null, role: 'user' }
     });
     
-    // Generate token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -127,13 +118,7 @@ app.post('/api/auth/register', async (req, res) => {
       message: 'User registered successfully',
       data: { 
         token, 
-        user: { 
-          id: user.id, 
-          name: user.name, 
-          email: user.email, 
-          phone: user.phone,
-          role: user.role 
-        } 
+        user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role } 
       }
     });
   } catch (error) {
@@ -142,8 +127,8 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Login
-app.post('/api/auth/login', async (req, res) => {
+// ✅ تسجيل دخول
+app.post('/api/users/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     
@@ -172,13 +157,7 @@ app.post('/api/auth/login', async (req, res) => {
       message: 'Login successful',
       data: { 
         token, 
-        user: { 
-          id: user.id, 
-          name: user.name, 
-          email: user.email, 
-          phone: user.phone,
-          role: user.role 
-        } 
+        user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role } 
       }
     });
   } catch (error) {
@@ -187,8 +166,8 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Get current user profile
-app.get('/api/auth/me', authenticateToken, async (req, res) => {
+// ✅ جلب ملفي الشخصي
+app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
@@ -202,6 +181,117 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
     res.json({ success: true, data: user });
   } catch (error) {
     console.error('Profile error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ✅ جلب جميع المستخدمين (Admin only)
+app.get('/api/users', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        createdAt: true,
+        orders: { select: { id: true, total: true, status: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    res.json({ success: true, data: users, count: users.length });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ✅ جلب مستخدم محدد (Admin only)
+app.get('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true, orders: true }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    res.json({ success: true, data: user });
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ✅ تحديث مستخدم (Admin only)
+app.put('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+    
+    const { name, phone, role } = req.body;
+    
+    const user = await prisma.user.update({
+      where: { id },
+      data: { name, phone, role },
+      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true }
+    });
+    
+    res.json({ success: true, message: 'User updated successfully', data: user });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ✅ حذف مستخدم (Admin only)
+app.delete('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+    
+    await prisma.user.delete({ where: { id } });
+    
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ✅ تغيير دور المستخدم (Admin only)
+app.patch('/api/users/:id/role', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { role } = req.body;
+    
+    const validRoles = ['user', 'admin'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role. Must be "user" or "admin"' });
+    }
+    
+    const user = await prisma.user.update({
+      where: { id },
+      data: { role },
+      select: { id: true, name: true, email: true, role: true }
+    });
+    
+    res.json({ success: true, message: 'User role updated successfully', data: user });
+  } catch (error) {
+    console.error('Update role error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -252,7 +342,6 @@ app.post('/api/products', authenticateToken, isAdmin, upload.single('image'), as
   try {
     const { name, category, description, price, sizes, isBestseller, stock } = req.body;
     
-    // Validation
     if (!name || !category || !price || !sizes) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
@@ -260,7 +349,6 @@ app.post('/api/products', authenticateToken, isAdmin, upload.single('image'), as
     let imageUrl = '';
     let imagePublicId = '';
     
-    // Upload image to Cloudinary if provided
     if (req.file) {
       try {
         const result = await uploadToCloudinary(req.file.buffer, 'loha/products');
@@ -268,7 +356,6 @@ app.post('/api/products', authenticateToken, isAdmin, upload.single('image'), as
         imagePublicId = result.public_id;
       } catch (cloudError) {
         console.error('Cloudinary upload error:', cloudError);
-        // Continue without image
       }
     }
     
@@ -317,7 +404,6 @@ app.put('/api/products/:id', authenticateToken, isAdmin, upload.single('image'),
     if (isBestseller) updateData.isBestseller = isBestseller === 'true';
     if (stock) updateData.stock = parseInt(stock);
     
-    // Upload new image if provided
     if (req.file) {
       try {
         const result = await uploadToCloudinary(req.file.buffer, 'loha/products');
@@ -353,7 +439,6 @@ app.delete('/api/products/:id', authenticateToken, isAdmin, async (req, res) => 
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
     
-    // Delete image from Cloudinary if exists
     if (product.imagePublicId) {
       try {
         await cloudinary.uploader.destroy(product.imagePublicId);
@@ -557,5 +642,36 @@ app.put('/api/custom-orders/:id/status', authenticateToken, isAdmin, async (req,
   }
 });
 
-// ============= EXPORT =============
+// ============= START SERVER =============
+app.listen(PORT, () => {
+  console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+  console.log(`📁 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`\n📋 User Endpoints:`);
+  console.log(`   POST   /api/users/register   - Register new user`);
+  console.log(`   POST   /api/users/login      - Login user`);
+  console.log(`   GET    /api/users/me         - Get my profile`);
+  console.log(`   GET    /api/users            - Get all users (Admin)`);
+  console.log(`   GET    /api/users/:id        - Get user by ID (Admin)`);
+  console.log(`   PUT    /api/users/:id        - Update user (Admin)`);
+  console.log(`   DELETE /api/users/:id        - Delete user (Admin)`);
+  console.log(`   PATCH  /api/users/:id/role   - Update user role (Admin)`);
+  console.log(`\n📋 Product Endpoints:`);
+  console.log(`   GET    /api/products         - Get all products`);
+  console.log(`   GET    /api/products/:id     - Get single product`);
+  console.log(`   POST   /api/products         - Create product (Admin)`);
+  console.log(`   PUT    /api/products/:id     - Update product (Admin)`);
+  console.log(`   DELETE /api/products/:id     - Delete product (Admin)`);
+  console.log(`\n📋 Order Endpoints:`);
+  console.log(`   POST   /api/orders           - Create order`);
+  console.log(`   GET    /api/orders/my-orders - Get my orders`);
+  console.log(`   GET    /api/orders           - Get all orders (Admin)`);
+  console.log(`   PUT    /api/orders/:id/status - Update order status (Admin)`);
+  console.log(`\n📋 Custom Order Endpoints:`);
+  console.log(`   POST   /api/custom-orders    - Create custom order`);
+  console.log(`   GET    /api/custom-orders/my-orders - Get my custom orders`);
+  console.log(`   GET    /api/custom-orders    - Get all custom orders (Admin)`);
+  console.log(`   PUT    /api/custom-orders/:id/status - Update custom order status (Admin)`);
+  console.log(`\n✨ All routes are ready!\n`);
+});
+
 module.exports = app;
