@@ -72,6 +72,19 @@ const uploadToCloudinary = (buffer, folder) => {
   });
 };
 
+// ============= HELPERS FOR SETTINGS =============
+const getOrCreateSettings = async () => {
+  let settings = await prisma.setting.findFirst();
+  
+  if (!settings) {
+    settings = await prisma.setting.create({
+      data: {} // استخدم القيم الافتراضية من Prisma schema
+    });
+  }
+  
+  return settings;
+};
+
 // ============= HEALTH & TEST ROUTES =============
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -87,7 +100,6 @@ app.get('/api/test', (req, res) => {
 
 // ============= 👑 USER ROUTES (المدمجة والمنظمة) =============
 
-// ✅ تسجيل مستخدم جديد
 app.post('/api/users/register', async (req, res) => {
   try {
     const { email, password, name, phone } = req.body;
@@ -127,7 +139,6 @@ app.post('/api/users/register', async (req, res) => {
   }
 });
 
-// ✅ تسجيل دخول
 app.post('/api/users/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -166,7 +177,6 @@ app.post('/api/users/login', async (req, res) => {
   }
 });
 
-// ✅ جلب ملفي الشخصي
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -185,7 +195,6 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   }
 });
 
-// ✅ جلب جميع المستخدمين (Admin only)
 app.get('/api/users', authenticateToken, isAdmin, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -208,7 +217,6 @@ app.get('/api/users', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// ✅ جلب مستخدم محدد (Admin only)
 app.get('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -232,7 +240,6 @@ app.get('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// ✅ تحديث مستخدم (Admin only)
 app.put('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -255,7 +262,6 @@ app.put('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// ✅ حذف مستخدم (Admin only)
 app.delete('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -272,7 +278,6 @@ app.delete('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// ✅ تغيير دور المستخدم (Admin only)
 app.patch('/api/users/:id/role', authenticateToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -401,8 +406,8 @@ app.put('/api/products/:id', authenticateToken, isAdmin, upload.single('image'),
     if (description) updateData.description = description;
     if (price) updateData.price = parseFloat(price);
     if (sizes) updateData.sizes = JSON.parse(sizes);
-    if (isBestseller) updateData.isBestseller = isBestseller === 'true';
-    if (stock) updateData.stock = parseInt(stock);
+    if (isBestseller !== undefined) updateData.isBestseller = isBestseller === 'true';
+    if (stock !== undefined) updateData.stock = parseInt(stock);
     
     if (req.file) {
       try {
@@ -642,6 +647,77 @@ app.put('/api/custom-orders/:id/status', authenticateToken, isAdmin, async (req,
   }
 });
 
+// ============= ✨ SETTINGS ROUTES (NEW) ✨ =============
+
+// جلب الإعدادات (Admin only)
+app.get('/api/settings', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const settings = await getOrCreateSettings();
+    res.json({ success: true, data: settings });
+  } catch (error) {
+    console.error('Get settings error:', error);
+    res.status(500).json({ success: false, message: 'Server error while fetching settings' });
+  }
+});
+
+// تحديث الإعدادات (Admin only)
+app.put('/api/settings', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const {
+      siteName, siteDescription, siteLogo,
+      contactEmail, contactPhone, whatsappNumber,
+      facebookUrl, instagramUrl, tiktokUrl,
+      address, shippingFee, freeShippingMin, returnPolicy
+    } = req.body;
+    
+    let settings = await prisma.setting.findFirst();
+    
+    if (!settings) {
+      settings = await prisma.setting.create({
+        data: {
+          siteName, siteDescription, siteLogo,
+          contactEmail, contactPhone, whatsappNumber,
+          facebookUrl, instagramUrl, tiktokUrl,
+          address, shippingFee, freeShippingMin, returnPolicy
+        }
+      });
+    } else {
+      settings = await prisma.setting.update({
+        where: { id: settings.id },
+        data: {
+          siteName, siteDescription, siteLogo,
+          contactEmail, contactPhone, whatsappNumber,
+          facebookUrl, instagramUrl, tiktokUrl,
+          address, shippingFee, freeShippingMin, returnPolicy
+        }
+      });
+    }
+    
+    res.json({ success: true, message: 'Settings saved successfully', data: settings });
+  } catch (error) {
+    console.error('Update settings error:', error);
+    res.status(500).json({ success: false, message: 'Server error while saving settings' });
+  }
+});
+
+// إعادة تعيين الإعدادات للقيم الافتراضية (Admin only)
+app.post('/api/settings/reset', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    // حذف جميع الإعدادات الموجودة
+    await prisma.setting.deleteMany();
+    
+    // إنشاء إعدادات جديدة بالقيم الافتراضية
+    const defaultSettings = await prisma.setting.create({
+      data: {} // تستخدم القيم الافتراضية من Prisma schema
+    });
+    
+    res.json({ success: true, message: 'Settings reset to default successfully', data: defaultSettings });
+  } catch (error) {
+    console.error('Reset settings error:', error);
+    res.status(500).json({ success: false, message: 'Server error while resetting settings' });
+  }
+});
+
 // ============= START SERVER =============
 app.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
@@ -671,6 +747,10 @@ app.listen(PORT, () => {
   console.log(`   GET    /api/custom-orders/my-orders - Get my custom orders`);
   console.log(`   GET    /api/custom-orders    - Get all custom orders (Admin)`);
   console.log(`   PUT    /api/custom-orders/:id/status - Update custom order status (Admin)`);
+  console.log(`\n📋 Settings Endpoints (NEW):`);
+  console.log(`   GET    /api/settings         - Get settings (Admin)`);
+  console.log(`   PUT    /api/settings         - Update settings (Admin)`);
+  console.log(`   POST   /api/settings/reset   - Reset settings to default (Admin)`);
   console.log(`\n✨ All routes are ready!\n`);
 });
 
