@@ -72,27 +72,32 @@ model CustomOrder {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
-
 model Setting {
   id               Int      @id @default(autoincrement())
   
+  // عام
   siteName         String   @default("LOHA")
   siteDescription  String   @default("لوحات فنية حصرية مصنوعة بالكامل باليد، تحمل روح الخط العربي والألوان الفاخرة")
   siteLogo         String   @default("")
   
+  // معلومات الاتصال
   contactEmail     String   @default("saraabdullwhab606@gmail.com")
   contactPhone     String   @default("01006230353")
   whatsappNumber   String   @default("201006230353")
   
+  // وسائل التواصل
   facebookUrl      String   @default("https://facebook.com/loha")
   instagramUrl     String   @default("https://instagram.com/loha_art")
   tiktokUrl        String   @default("https://tiktok.com/@loha_art")
   
+  // العنوان
   address          String   @default("القاهرة، مصر")
   
+  // الشحن
   shippingFee      Int      @default(50)
   freeShippingMin  Int      @default(500)
   
+  // سياسات
   returnPolicy     String   @default("يمكن استبدال المنتج خلال 30 يوم من تاريخ الشراء بشرط أن يكون بحالة جديدة")
   
   createdAt        DateTime @default(now())

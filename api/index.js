@@ -78,7 +78,7 @@ const getOrCreateSettings = async () => {
   
   if (!settings) {
     settings = await prisma.setting.create({
-      data: {} // استخدم القيم الافتراضية من Prisma schema
+      data: {} 
     });
   }
   
@@ -649,7 +649,21 @@ app.put('/api/custom-orders/:id/status', authenticateToken, isAdmin, async (req,
 
 // ============= ✨ SETTINGS ROUTES (NEW) ✨ =============
 
-// جلب الإعدادات (Admin only)
+// ============= ✨ SETTINGS ROUTES ✨ =============
+
+// Helper function
+const getOrCreateSettings = async () => {
+  let settings = await prisma.setting.findFirst();
+  
+  if (!settings) {
+    settings = await prisma.setting.create({
+      data: {} // استخدم القيم الافتراضية من Prisma schema
+    });
+  }
+  
+  return settings;
+};
+
 app.get('/api/settings', authenticateToken, isAdmin, async (req, res) => {
   try {
     const settings = await getOrCreateSettings();
@@ -660,36 +674,52 @@ app.get('/api/settings', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// تحديث الإعدادات (Admin only)
 app.put('/api/settings', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const {
-      siteName, siteDescription, siteLogo,
-      contactEmail, contactPhone, whatsappNumber,
-      facebookUrl, instagramUrl, tiktokUrl,
-      address, shippingFee, freeShippingMin, returnPolicy
-    } = req.body;
+    console.log('📝 Updating settings with:', req.body);
     
     let settings = await prisma.setting.findFirst();
     
     if (!settings) {
+      // إنشاء إعدادات جديدة
       settings = await prisma.setting.create({
         data: {
-          siteName, siteDescription, siteLogo,
-          contactEmail, contactPhone, whatsappNumber,
-          facebookUrl, instagramUrl, tiktokUrl,
-          address, shippingFee, freeShippingMin, returnPolicy
+          siteName: req.body.siteName || 'LOHA',
+          siteDescription: req.body.siteDescription || '',
+          siteLogo: req.body.siteLogo || '',
+          contactEmail: req.body.contactEmail || '',
+          contactPhone: req.body.contactPhone || '',
+          whatsappNumber: req.body.whatsappNumber || '',
+          facebookUrl: req.body.facebookUrl || '',
+          instagramUrl: req.body.instagramUrl || '',
+          tiktokUrl: req.body.tiktokUrl || '',
+          address: req.body.address || '',
+          shippingFee: req.body.shippingFee || 50,
+          freeShippingMin: req.body.freeShippingMin || 500,
+          returnPolicy: req.body.returnPolicy || '',
         }
       });
     } else {
+      // تحديث الإعدادات الموجودة
+      const updateData = {};
+      
+      if (req.body.siteName !== undefined) updateData.siteName = req.body.siteName;
+      if (req.body.siteDescription !== undefined) updateData.siteDescription = req.body.siteDescription;
+      if (req.body.siteLogo !== undefined) updateData.siteLogo = req.body.siteLogo;
+      if (req.body.contactEmail !== undefined) updateData.contactEmail = req.body.contactEmail;
+      if (req.body.contactPhone !== undefined) updateData.contactPhone = req.body.contactPhone;
+      if (req.body.whatsappNumber !== undefined) updateData.whatsappNumber = req.body.whatsappNumber;
+      if (req.body.facebookUrl !== undefined) updateData.facebookUrl = req.body.facebookUrl;
+      if (req.body.instagramUrl !== undefined) updateData.instagramUrl = req.body.instagramUrl;
+      if (req.body.tiktokUrl !== undefined) updateData.tiktokUrl = req.body.tiktokUrl;
+      if (req.body.address !== undefined) updateData.address = req.body.address;
+      if (req.body.shippingFee !== undefined) updateData.shippingFee = req.body.shippingFee;
+      if (req.body.freeShippingMin !== undefined) updateData.freeShippingMin = req.body.freeShippingMin;
+      if (req.body.returnPolicy !== undefined) updateData.returnPolicy = req.body.returnPolicy;
+      
       settings = await prisma.setting.update({
         where: { id: settings.id },
-        data: {
-          siteName, siteDescription, siteLogo,
-          contactEmail, contactPhone, whatsappNumber,
-          facebookUrl, instagramUrl, tiktokUrl,
-          address, shippingFee, freeShippingMin, returnPolicy
-        }
+        data: updateData
       });
     }
     
@@ -700,15 +730,12 @@ app.put('/api/settings', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// إعادة تعيين الإعدادات للقيم الافتراضية (Admin only)
 app.post('/api/settings/reset', authenticateToken, isAdmin, async (req, res) => {
   try {
-    // حذف جميع الإعدادات الموجودة
     await prisma.setting.deleteMany();
     
-    // إنشاء إعدادات جديدة بالقيم الافتراضية
     const defaultSettings = await prisma.setting.create({
-      data: {} // تستخدم القيم الافتراضية من Prisma schema
+      data: {}
     });
     
     res.json({ success: true, message: 'Settings reset to default successfully', data: defaultSettings });
@@ -717,7 +744,6 @@ app.post('/api/settings/reset', authenticateToken, isAdmin, async (req, res) => 
     res.status(500).json({ success: false, message: 'Server error while resetting settings' });
   }
 });
-
 // ============= START SERVER =============
 app.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
@@ -752,6 +778,10 @@ app.listen(PORT, () => {
   console.log(`   PUT    /api/settings         - Update settings (Admin)`);
   console.log(`   POST   /api/settings/reset   - Reset settings to default (Admin)`);
   console.log(`\n✨ All routes are ready!\n`);
+  console.log(`\n📋 Settings Endpoints:`);
+console.log(`   GET    /api/settings         - Get settings (Admin)`);
+console.log(`   PUT    /api/settings         - Update settings (Admin)`);
+console.log(`   POST   /api/settings/reset   - Reset settings (Admin)`);
 });
 
 module.exports = app;

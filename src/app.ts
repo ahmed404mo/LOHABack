@@ -54,6 +54,7 @@ import userRoutes from './modules/users/users.routes';
 import productRoutes from './modules/products/products.routes';
 import orderRoutes from './modules/orders/orders.routes';
 import customOrderRoutes from './modules/custom-orders/custom-orders.routes';
+import { settingsRoutes } from './modules/settings'; 
 
 const app = express();
 
@@ -69,6 +70,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/custom-orders', customOrderRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
