@@ -652,17 +652,17 @@ app.put('/api/custom-orders/:id/status', authenticateToken, isAdmin, async (req,
 // ============= ✨ SETTINGS ROUTES ✨ =============
 
 // Helper function
-const getOrCreateSettings = async () => {
-  let settings = await prisma.setting.findFirst();
+// const getOrCreateSettings = async () => {
+//   let settings = await prisma.setting.findFirst();
   
-  if (!settings) {
-    settings = await prisma.setting.create({
-      data: {} // استخدم القيم الافتراضية من Prisma schema
-    });
-  }
+//   if (!settings) {
+//     settings = await prisma.setting.create({
+//       data: {} // استخدم القيم الافتراضية من Prisma schema
+//     });
+//   }
   
-  return settings;
-};
+//   return settings;
+// };
 
 app.get('/api/settings', authenticateToken, isAdmin, async (req, res) => {
   try {
